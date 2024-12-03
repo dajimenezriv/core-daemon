@@ -1,49 +1,50 @@
 'use strict';
 
-var EmbeddedStorageAdapter = require('../../../lib/storage/adapters/embedded');
-var StorageItem = require('../../../lib/storage/item');
+var FileStorageAdapter = require('../../../lib/storage/adapters/file');
+var storj = require('storj-lib');
 var expect = require('chai').expect;
-var utils = require('../../../lib/utils');
-var Contract = require('../../../lib/contract');
-var AuditStream = require('../../../lib/audit-tools/audit-stream');
 var sinon = require('sinon');
 var os = require('os');
+var fs = require('fs');
 var rimraf = require('rimraf');
 var path = require('path');
-var TMP_DIR = path.join(os.tmpdir(), 'STORJ_EMBEDDED_ADAPTER_TEST');
+var TMP_DIR = path.join(os.tmpdir(), 'STORJ_FILE_ADAPTER_TEST');
 var mkdirp = require('mkdirp');
-var EventEmitter = require('events').EventEmitter;
+
+const utils = storj.utils;
+const AuditStream = storj.AuditStream;
+const Contract = storj.Contract;
 
 function tmpdir() {
-  return path.join(TMP_DIR, 'test-' + Date.now() + '.db');
+  return path.join(TMP_DIR, 'test-' + Date.now());
 }
 
 var store = null;
-var hash = utils.rmd160('test');
+var hash = utils.ripemd160('test');
 var audit = new AuditStream(12);
 var contract = new Contract();
-var item = new StorageItem({
+var item = new storj.StorageItem({
   hash: hash,
-  shard: new Buffer('test')
+  shard: new Buffer.from('test')
 });
 
-describe('EmbeddedStorageAdapter', function() {
+describe('FileStorageAdapter', function() {
 
   before(function() {
     if (utils.existsSync(TMP_DIR)) {
       rimraf.sync(TMP_DIR);
     }
     mkdirp.sync(TMP_DIR);
-    audit.end(Buffer('test'));
-    store = new EmbeddedStorageAdapter(tmpdir());
+    audit.end(Buffer.from('test'));
+    store = new FileStorageAdapter(tmpdir());
   });
 
   describe('@constructor', function() {
 
     it('should create instance without the new keyword', function() {
       expect(
-        EmbeddedStorageAdapter(tmpdir())
-      ).to.be.instanceOf(EmbeddedStorageAdapter);
+        FileStorageAdapter(tmpdir())
+      ).to.be.instanceOf(FileStorageAdapter);
     });
 
   });
@@ -54,7 +55,7 @@ describe('EmbeddedStorageAdapter', function() {
       expect(function() {
         var tmp = tmpdir();
         mkdirp.sync(tmp);
-        EmbeddedStorageAdapter.prototype._validatePath(tmp);
+        FileStorageAdapter.prototype._validatePath(tmp);
       }).to.not.throw(Error);
     });
 
@@ -73,13 +74,13 @@ describe('EmbeddedStorageAdapter', function() {
     });
 
     it('should bubble error if the underlying db#put fails', function(done) {
-      var _put = sinon.stub(store._db, 'put').callsArgWith(
-        3,
+      var _writeFile = sinon.stub(fs, 'writeFile').callsArgWith(
+        2,
         new Error('Failed')
       );
       store._put(hash, item, function(err) {
         expect(err.message).equal('Failed');
-        _put.restore();
+        _writeFile.restore();
         done();
       });
     });
@@ -97,13 +98,13 @@ describe('EmbeddedStorageAdapter', function() {
     });
 
     it('should return error if the data is not found', function(done) {
-      var _dbget = sinon.stub(store._db, 'get').callsArgWith(
+      var _readFile = sinon.stub(fs, 'readFile').callsArgWith(
         2,
         new Error('Not found')
       );
       store._get(hash, function(err) {
         expect(err.message).to.equal('Not found');
-        _dbget.restore();
+        _readFile.restore();
         done();
       });
     });
@@ -167,13 +168,13 @@ describe('EmbeddedStorageAdapter', function() {
     });
 
     it('should return error if the data is not found', function(done) {
-      var _dbpeek = sinon.stub(store._db, 'get').callsArgWith(
+      var _readFile = sinon.stub(fs, 'readFile').callsArgWith(
         2,
         new Error('Not found')
       );
       store._peek(hash, function(err) {
         expect(err.message).to.equal('Not found');
-        _dbpeek.restore();
+        _readFile.restore();
         done();
       });
     });
@@ -191,19 +192,17 @@ describe('EmbeddedStorageAdapter', function() {
       }).on('end', done);
     });
 
-    it('should bubble error if emitted from stream', function(done) {
-      var emitter = new EventEmitter();
-      var _createKeyStream = sinon.stub(store._db, 'createKeyStream').returns(
-        emitter
+    it('should bubble error if read from directory', function(done) {
+      var _readdir = sinon.stub(fs, 'readdir').callsArgWith(
+        1,
+        new Error('Failed')
       );
       var keyStream = store._keys();
-      keyStream.on('error', function(err) {
-        _createKeyStream.restore();
+      keyStream.on('data', function() {})
+      .on('error', function(err) {
+        _readdir.restore();
         expect(err.message).to.equal('Failed');
         done();
-      })
-      setImmediate(function() {
-        emitter.emit('error', new Error('Failed'));
       });
     });
 
@@ -212,25 +211,25 @@ describe('EmbeddedStorageAdapter', function() {
   describe('#_del', function() {
 
     it('should return error if del fails', function(done) {
-      var _dbdel = sinon.stub(store._db, 'del').callsArgWith(
+      var _unlink = sinon.stub(fs, 'unlink').callsArgWith(
         1,
         new Error('Failed to delete')
       );
       store._del(hash, function(err) {
         expect(err.message).to.equal('Failed to delete');
-        _dbdel.restore();
+        _unlink.restore();
         done();
       });
     });
 
     it('should return error if unlink fails', function(done) {
-      var _storereset = sinon.stub(store._fs, 'unlink').callsArgWith(
+      var _unlink = sinon.stub(store._fs, 'unlink').callsArgWith(
         1,
         new Error('Failed to delete')
       );
       store._del(hash, function(err) {
         expect(err.message).to.equal('Failed to delete');
-        _storereset.restore();
+        _unlink.restore();
         done();
       });
     });
@@ -242,40 +241,27 @@ describe('EmbeddedStorageAdapter', function() {
       });
     });
 
-  });
-
-  describe('#_size', function() {
-
-    it('should bubble errors from size calculation', function(done) {
-      var _approx = sinon.stub(store._db.db, 'approximateSize').callsArgWith(
-        2,
-        new Error('Failed')
-      );
-      store._isUsingDefaultBackend = true;
-      store._size(function(err) {
-        _approx.restore();
-        expect(err.message).to.equal('Failed');
+    it('should return error if shard does not exists', function(done) {
+      store._del(hash, function(err) {
+        expect(err.message).to.contain('no such file or directory');
         done();
       });
     });
 
+  });
+
+  describe('#_size', function() {
+
     it('should return the size of the store on disk', function(done) {
-      var _approx = sinon.stub(store._db.db, 'approximateSize').callsArgWith(
-        2,
-        null,
-        7 * 1024
-      );
       var _stat = sinon.stub(store._fs, 'stat').callsArgWith(
         0,
         null,
         [{sBucketStats: {size: 2 * 1024}}, {sBucketStats: {size: 3 * 1024}}]
       );
       store._isUsingDefaultBackend = true;
-      store._size(function(err, shardsize, contractsize) {
-        _approx.restore();
+      store._size(function(err, shardsize) {
         _stat.restore();
         expect(shardsize).to.equal(5 * 1024);
-        expect(contractsize).to.equal(7 * 1024);
         done();
       });
     });
@@ -303,32 +289,6 @@ describe('EmbeddedStorageAdapter', function() {
       });
     });
 
-    it('should open the db if closed', function(done) {
-      store._isOpen = false;
-      var open = sinon.stub(store._db, 'open').callsArgWith(0, null);
-      store._open(function(err) {
-        open.restore();
-        expect(open.called).to.equal(true);
-        expect(err).to.equal(null);
-        done();
-      });
-    });
-
-    it('should bubble error if db open fails', function(done) {
-      store._isOpen = false;
-      var open = sinon.stub(store._db, 'open').callsArgWith(
-        0,
-        new Error('Failed')
-      );
-      store._open(function(err) {
-        store._isOpen = true;
-        open.restore();
-        expect(open.called).to.equal(true);
-        expect(err.message).to.equal('Failed');
-        done();
-      });
-    });
-
   });
 
   describe('#_close', function() {
@@ -337,32 +297,6 @@ describe('EmbeddedStorageAdapter', function() {
       store._isOpen = false;
       store._close(function(err) {
         expect(err).to.equal(null);
-        done();
-      });
-    });
-
-    it('should close the db if open', function(done) {
-      store._isOpen = true;
-      var close = sinon.stub(store._db, 'close').callsArgWith(0, null);
-      store._close(function(err) {
-        close.restore();
-        expect(close.called).to.equal(true);
-        expect(err).to.equal(null);
-        done();
-      });
-    });
-
-    it('should bubble error if db close fails', function(done) {
-      store._isOpen = true;
-      var close = sinon.stub(store._db, 'close').callsArgWith(
-        0,
-        new Error('Failed')
-      );
-      store._close(function(err) {
-        store._isOpen = true;
-        close.restore();
-        expect(close.called).to.equal(true);
-        expect(err.message).to.equal('Failed');
         done();
       });
     });

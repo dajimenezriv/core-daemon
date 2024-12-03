@@ -80,6 +80,9 @@
     "signatureVersion": "v4",
     "bucketName": "",
     "bucketLocation": ""
+  },
+  "file": {
+    "enabled": true
   }
   // Shard data storage will be optionally stored on a S3 API-Compatible Bucket.
   // Please test your credentials before setting this feature.

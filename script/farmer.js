@@ -3,6 +3,7 @@
 'use strict';
 
 const utils = require('../lib/utils');
+const FileStorageAdapter = require('../lib/storage/adapters/file');
 const storj = require('storj-lib');
 const Logger = require('kad-logger-json');
 const config = JSON.parse(JSON.stringify(require('../lib/config/farmer')));
@@ -37,6 +38,14 @@ config.maxShardSize = config.maxShardSize ? bytes.parse(config.maxShardSize) : n
 if (config.S3 && config.S3.enabled) {
   config.storageManager = new storj.StorageManager(
     new storj.BucketStorageAdapter(config.storagePath, { ...config.S3, nodeID: config.keyPair.getNodeID() }),
+    {
+      maxCapacity: spaceAllocation,
+      logger: config.logger
+    }
+  );
+} else if (config.file && config.file.enabled) {
+  config.storageManager = new storj.StorageManager(
+    new FileStorageAdapter(config.storagePath),
     {
       maxCapacity: spaceAllocation,
       logger: config.logger
