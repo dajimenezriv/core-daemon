@@ -1,0 +1,23 @@
+name: xcore
+version: git
+summary: farm data on the Internxt network.
+description: |
+  Earn money by sharing your hard drive space.
+  Daemon + CLI for farming data on the Internxt network.
+
+grade: stable
+confinement: strict
+
+apps:
+  xcore:
+    command: bin/xcore
+    plugs: [network, network-bind, home]
+
+parts:
+  xcore-daemon:
+    source-subdir: ..
+    plugin: nodejs
+    node-engine: '8.9.0'
+    install: npm install
+    build-packages: [git, python, build-essential]
+    stage-packages: [nano]

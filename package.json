@@ -1,0 +1,97 @@
+{
+  "name": "xcore-daemon",
+  "version": "5.3.1",
+  "description": "[DEPRECATED] daemon + process manager for sharing space on the internxt network",
+  "main": "index.js",
+  "bin": {
+    "xcore": "bin/xcore.js",
+    "xcore-start": "bin/xcore-start.js",
+    "xcore-stop": "bin/xcore-stop.js",
+    "xcore-restart": "bin/xcore-restart.js",
+    "xcore-status": "bin/xcore-status.js",
+    "xcore-logs": "bin/xcore-logs.js",
+    "xcore-save": "bin/xcore-save.js",
+    "xcore-load": "bin/xcore-load.js",
+    "xcore-killall": "bin/xcore-killall.js",
+    "xcore-destroy": "bin/xcore-destroy.js",
+    "xcore-daemon": "bin/xcore-daemon.js",
+    "xcore-create": "bin/xcore-create.js",
+    "xcore-clean": "bin/xcore-clean.js"
+  },
+  "directories": {
+    "test": "test",
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "npm run testsuite && npm run linter",
+    "testsuite": "STORJ_ALLOW_LOOPBACK=1 mocha test/** --recursive",
+    "coverage": "STORJ_ALLOW_LOOPBACK=1 ./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- --recursive",
+    "linter": "./node_modules/.bin/jshint --config .jshintrc ./index.js ./lib ./test ./bin"
+  },
+  "preferGlobal": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/internxt/xcore-daemon.git"
+  },
+  "keywords": [
+    "internxt",
+    "farmer",
+    "xcore",
+    "share"
+  ],
+  "author": "Alexander Leitner <alex@storj.io>",
+  "contributors": [
+    {
+      "name": "Gordon Hall",
+      "email": "gordon@storj.io"
+    },
+    {
+      "name": "littleskunk",
+      "url": "https://github.com/littleskunk"
+    },
+    {
+      "name": "Steve Ashman",
+      "url": "https://github.com/ssa3512"
+    }
+  ],
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/internxt/xcore-daemon/issues"
+  },
+  "homepage": "https://github.com/internxt/xcore-daemon#readme",
+  "dependencies": {
+    "async": "^3.1.0",
+    "blindfold": "^1.0.1",
+    "bytes": "^3.1.0",
+    "cli-table": "^0.3.1",
+    "colors": "^1.3.3",
+    "commander": "^2.20.0",
+    "daemon": "github:zipang/daemon.node#48d0977c26fb3a6a44ae99aae3471b9d5a761085",
+    "diskusage": "^1.1.3",
+    "dnode": "^1.2.2",
+    "du": "^1.0.0",
+    "editor": "^1.0.0",
+    "express": "^4.17.3",
+    "fslogger": "^2.0.2",
+    "kad-logger-json": "^0.1.2",
+    "mkdirp": "^1.0.4",
+    "moment": "^2.24.0",
+    "pretty-ms": "^7.0.1",
+    "rc": "^1.2.8",
+    "storj-lib": "internxt/core#v8.7.3-beta",
+    "strip-json-comments": "^3.0.1",
+    "tail": "^2.0.2",
+    "touch": "3.1.0",
+    "web3-utils": "^1.0.0",
+    "winston": "^3.2.1"
+  },
+  "devDependencies": {
+    "chai": "^2.2.0",
+    "coveralls": "^2.11.2",
+    "istanbul": "^0.4.5",
+    "jshint": "^2.10.2",
+    "mocha": "^2.2.4",
+    "proxyquire": "^2.1.1",
+    "sinon": "^1.14.1"
+  }
+}
